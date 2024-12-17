@@ -25,6 +25,7 @@ def send_message(input_text):
         return f"Error: {response.status_code}", "", ""
 
 # Function to post to Twitter
+# Credential to be set
 def post_to_twitter(message):
     api_key = "your_api_key"
     api_secret_key = "your_api_secret_key"
