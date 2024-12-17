@@ -19,6 +19,10 @@ import { settings } from "@ai16z/eliza";
 import { createApiRouter } from "./api.ts";
 import * as fs from "fs";
 import * as path from "path";
+import { runMain } from "module";
+
+//import { fetchSportsTweets } from "../../../agent/src/services/twitter/services.js";
+
 const upload = multer({ storage: multer.memoryStorage() });
 
 export const messageHandlerTemplate =
@@ -202,6 +206,10 @@ export class DirectClient {
                     template: messageHandlerTemplate,
                 });
 
+                let x = runtime.providers[3]
+                let customProvider = await x.get(runtime,memory);
+                let customCharater = runtime.character
+
                 const response = await generateMessageResponse({
                     runtime: runtime,
                     context,
@@ -238,10 +246,14 @@ export class DirectClient {
                     }
                 );
 
+                let customObject ={
+                    customeCharacter:customCharater,
+                    customProvider:customProvider,
+                }
                 if (message) {
-                    res.json([response, message]);
+                    res.json([response, message,customCharater,customProvider]);
                 } else {
-                    res.json([response]);
+                    res.json([response,customObject]);
                 }
             }
         );
