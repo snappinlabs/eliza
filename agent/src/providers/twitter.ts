@@ -6,13 +6,14 @@ import { fetchSportsTweets, fetchDocuments } from "../services/twitter/services.
 export const tweetsProvider: Provider = {
   get: async (runtime: IAgentRuntime, message: Memory, state?: State) => {
     // Get relevant data using runtime services
-   // const tweets = await fetchSportsTweets()
-    const documnetsData = (await fetchDocuments()).toString();
+    const tweets = await fetchSportsTweets()
+   // const documnetsData = (await fetchDocuments()).toString();
 
     // Format and return context
   //  const data = tweets.concat(documnetsData);
 
-    return documnetsData;
+  console.log(tweets);
+    return tweets;
   },
   // asdfd
 };

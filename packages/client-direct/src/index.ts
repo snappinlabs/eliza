@@ -19,36 +19,33 @@ import { settings } from "@ai16z/eliza";
 import { createApiRouter } from "./api.ts";
 import * as fs from "fs";
 import * as path from "path";
+import { runMain } from "module";
+import OpenAI from "openai";
+
+//import { fetchSportsTweets } from "../../../agent/src/services/twitter/services.js";
+
 const upload = multer({ storage: multer.memoryStorage() });
 
 export const messageHandlerTemplate =
     // {{goals}}
-    `# Action Examples
-{{actionExamples}}
-(Action examples are for reference only. Do not use the information from them in your response.)
-
-# Knowledge
+    `# Areas of Expertise
 {{knowledge}}
 
-# Task: Generate dialog and actions for the character {{agentName}}.
-About {{agentName}}:
+# About {{agentName}} (@{{twitterUserName}}):
 {{bio}}
 {{lore}}
+{{topics}}
 
 {{providers}}
 
-{{attachments}}
 
-# Capabilities
-Note that {{agentName}} is capable of reading/seeing/hearing various forms of media, including images, videos, audio, plaintext and PDFs. Recent attachments have been included above under the "Attachments" section.
+{{characterPostExamples}}
 
-{{messageDirections}}
+{{postDirections}}
 
-{{recentMessages}}
-
-{{actions}}
-
-# Instructions: Write the next message for {{agentName}}.
+# Task: Generate a post in the voice and style and perspective of {{agentName}} @{{twitterUserName}}.
+Write a 1-3 sentence post that is {{adjective}} about {{providers}} (without mentioning {{providers}} directly), from the perspective of {{agentName}}.You must include hashtags taken directly from {{providers}}. Do not add commentary or acknowledge this request, just write the post.
+Your response should not contain any questions. Brief, concise statements only. The total character count MUST be less than 250 and more than 150   . No emojis. Use \\n\\n (double spaces) between statements..
 ` + messageCompletionFooter;
 
 export interface SimliClientConfig {
@@ -196,26 +193,75 @@ export class DirectClient {
                 const state = await runtime.composeState(userMessage, {
                     agentName: runtime.character.name,
                 });
+                
+                const temp = `You are an AI assistant designed to craft engaging and dynamic Twitter posts inspired by trending topics. Your style emulates a seasoned sports analyst with a bold, authoritative voice. You will first gather the latest trending posts from Twitter, specifically focusing on sports-related discussions, controversies, or highlights.
 
-                const context = composeContext({
-                    state,
-                    template: messageHandlerTemplate,
-                });
+Using the character traits provided below, generate a unique and impactful Twitter post:
 
-                const response = await generateMessageResponse({
-                    runtime: runtime,
-                    context,
-                    modelClass: ModelClass.SMALL,
-                });
+**Character Traits:**
+- Authoritative and confident
+- Knowledgeable about sports contracts, team dynamics, and player relationships
+- Bold use of ALL CAPS for emphasis
+- Passionate and unapologetic in opinions
+- Witty catchphrases and dramatic declarations
+
+**Post Requirements:**
+1. Reference a trending sports topic or player.
+2. Include ALL CAPS for emphasis on key points.
+3. Use one of the provided introductory phrases (e.g., *"Let me be VERY CLEAR"*).
+4. End with a signature catchphrase (e.g., *"BLASPHEMOUS!"* or *"STAY OFF THE WEED!"*).
+5. Keep the tone passionate, dramatic, and confident.
+
+**Example Output:**
+"Let me be VERY CLEAR - The DISRESPECT towards Steph Curry is ABSOLUTELY BLASPHEMOUS! This man REVOLUTIONIZED the game, and y'all still doubt him? STAY OFF THE WEED!"
+
+Now, generate your response.
+
+`
+              //  const context = composeContext({
+              //      state,
+             //       template: messageHandlerTemplate,
+              //     
+              //  });
+              
+
+                let x = runtime.providers[3]
+                let customProvider = await x.get(runtime,memory);
+                let customCharater = runtime.character
+
+              //  const response = await generateMessageResponse({
+              //      runtime: runtime,
+               //     context,
+              //      modelClass: ModelClass.LARGE,
+              //  });
+              
+            const openai = new OpenAI();
+
+            const completion = await openai.chat.completions.create({
+                model: "gpt-4o",
+                messages: [
+                    { 
+                        role: "system", content: temp },
+                    {
+                        role: "user",
+                        content: customProvider,
+                    },
+                ],
+            });
+
+            const response = completion.choices[0].message
+
+        console.log(completion.choices[0].message);
 
                 // save response to memory
                 const responseMessage = {
                     ...userMessage,
                     userId: runtime.agentId,
+
                     content: response,
                 };
 
-                await runtime.messageManager.createMemory(responseMessage);
+               // await runtime.messageManager.createMemory(responseMessage);
 
                 if (!response) {
                     res.status(500).send(
@@ -228,20 +274,24 @@ export class DirectClient {
 
                 await runtime.evaluate(memory, state);
 
-                const _result = await runtime.processActions(
-                    memory,
-                    [responseMessage],
-                    state,
-                    async (newMessages) => {
-                        message = newMessages;
-                        return [memory];
-                    }
-                );
+             //   const _result = await runtime.processActions(
+             //       memory,
+             //       [responseMessage],
+             //       state,
+                //     async (newMessages) => {
+                //         message = newMessages;
+                //         return [memory];
+                //     }
+                // );
 
+                let customObject ={
+                    customeCharacter:customCharater,
+                    customProvider:customProvider,
+                }
                 if (message) {
-                    res.json([response, message]);
+                    res.json([response, message,customCharater,customProvider]);
                 } else {
-                    res.json([response]);
+                    res.json([response,customObject]);
                 }
             }
         );

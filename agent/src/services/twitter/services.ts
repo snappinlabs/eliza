@@ -2,61 +2,72 @@ import axios from "axios";
 import * as dotenv from "dotenv";
 import { PdfService } from "@ai16z/plugin-node";
 import * as fs from "fs";
+import * as path from "path";
+import { fileURLToPath } from "url";
 
 // Load environment variables from .env file
 dotenv.config();
 
 // Define constants
 const BEARER_TOKEN = process.env.BEARER_TOKEN;
-const BASE_URL = "https://api.twitter.com/2/tweets/search/recent";
+const BASE_URL = process.env.BASE_URL;
 
-/**
- * Fetch recent tweets related to sports.
- * @param maxResults Number of tweets to fetch (default: 10)
- */
-
-// this function will get data from documnets for buliding custom knowledge base
-export const fetchDocuments = async (): Promise<string[]> => {
-    const pdfService = new PdfService();
-    const pdfFilePath = "C:/Users/Dell/eliza-1/agent/src/services/twitter/game.pdf";  //a dummy pdf
-    const pdfBuffer = fs.readFileSync(pdfFilePath);
-    try {
-        // Convert the PDF buffer to text
-        const pdfText = await pdfService.convertPdfToText(pdfBuffer);
-
-        return [pdfText];
-    } catch (error) {
-        console.error("Error converting PDF to text:", error);
-    }
+// Ensure BEARER_TOKEN is available
+if (!BEARER_TOKEN) {
+  throw new Error("BEARER_TOKEN is not defined. Please set it in the .env file.");
 }
 
+//Fetch documents for building a custom knowledge base.
 
-// this function will get trends from twitter
-export const fetchSportsTweets = async (maxResults: number = 10): Promise<string[]> => {
-    if (!BEARER_TOKEN) {
-      throw new Error("Bearer token is missing. Please check your .env file.");
-    }
+export const fetchDocuments = async (): Promise<string[]> => {
 
-    try {
-      const query = "sports -is:retweet lang:en"; // Query to filter tweets
-      const url = `${BASE_URL}?query=${encodeURIComponent(query)}&max_results=${maxResults}`;
+  try {
+    const pdfFilePath = path.join(path.dirname(fileURLToPath(import.meta.url)), "game.pdf");
+    const pdfBuffer = fs.readFileSync(pdfFilePath);
+    const pdfService = new PdfService();
 
-      // Make API call
-      const response = await axios.get(url, {
-        headers: {
-          Authorization: `Bearer ${BEARER_TOKEN}`,
-        },
-      });
+    // Convert the PDF buffer to text
+    const pdfText = await pdfService.convertPdfToText(pdfBuffer);
 
-      // Extract tweets and return as an array of strings
-      const tweets = response.data.data;
-      if (tweets) {
-        return tweets.map((tweet: any) => tweet.text);
-      } else {
-        return []; // Return an empty array if no tweets are found
-      }
-    } catch (error: any) {
-      console.error("Error fetching tweets:", error.response?.data || error.message);
-      throw error;
-    }
-  };
+    return [pdfText];
+  } 
+  catch (error) {
+    console.error("Error converting PDF to text:", error.message);
+    throw new Error("Failed to process the PDF file.");
+  }
+};
+
+/**
+ * Fetch trending tweets from twitter
+ * @param query Search query for tweets (default: "sports -is:retweet lang:en").
+ * @param maxResults Number of tweets to fetch (default: 10).
+ */
+
+export const fetchSportsTweets = async (
+  query: string = "sports -is:retweet lang:en",
+  maxResults: number = 10
+): Promise<string[]> => {
+  try {
+    const url = `${BASE_URL}?query=${encodeURIComponent(query)}&max_results=${maxResults}`;
+
+    // Make API call
+    const response = await axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${BEARER_TOKEN}`,
+      },
+    });
+
+    // Extract tweets and return as an array of strings
+    const tweets = response.data.data;
+    const texts = tweets.map((item) => item.text);
+   // return tweets ? tweets.map((tweet: any) => tweet.text) : [];
+    return texts
+  }
+
+  catch (error: any) {
+
+    console.error("Error fetching tweets:", error.response?.data || error.message);
+    throw new Error("Failed to fetch tweets. Please check your network and API credentials.");
+
+  }
+};

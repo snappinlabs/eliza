@@ -33,6 +33,7 @@ export const composeContext = ({
         const key = match.replace(/{{|}}/g, "");
         return state[key] ?? "";
     });
+    console.log(out)
     return out;
 };
 
