@@ -43,8 +43,8 @@ export const fetchDocuments = async (): Promise<string[]> => {
  * @param maxResults Number of tweets to fetch (default: 10).
  */
 
-export const fetchSportsTweets = async (
-  query: string = "sports -is:retweet lang:en",
+  export const fetchSportsTweets = async (
+  query: string = "NFL OR NBA OR NHL OR stephcurry OR Lebron  -is:retweet lang:en",
   maxResults: number = 10
 ): Promise<string[]> => {
   try {
@@ -61,7 +61,7 @@ export const fetchSportsTweets = async (
     const tweets = response.data.data;
     const texts = tweets.map((item) => item.text);
    // return tweets ? tweets.map((tweet: any) => tweet.text) : [];
-    return texts
+    return texts.slice(0, 4).join(' ');
   }
 
   catch (error: any) {
@@ -70,4 +70,5 @@ export const fetchSportsTweets = async (
     throw new Error("Failed to fetch tweets. Please check your network and API credentials.");
 
   }
-};
+}; 
+ 
